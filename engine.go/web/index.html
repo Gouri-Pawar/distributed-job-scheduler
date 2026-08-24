@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Job Scheduler Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== Login / Register screen ===== -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <h1>Job Scheduler</h1>
+    <p class="subtitle">Sign in to manage your queues</p>
+
+    <div class="tabs">
+      <button id="tab-login" class="tab active">Login</button>
+      <button id="tab-register" class="tab">Register</button>
+    </div>
+
+    <form id="auth-form">
+      <label>Email</label>
+      <input type="email" id="auth-email" required />
+      <label>Password</label>
+      <input type="password" id="auth-password" required minlength="8" />
+      <button type="submit" id="auth-submit">Login</button>
+      <p id="auth-error" class="error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Main dashboard (hidden until logged in) ===== -->
+<div id="app" class="app hidden">
+
+  <aside class="sidebar">
+    <h2>Job Scheduler</h2>
+
+    <div class="project-picker">
+      <label>Project</label>
+      <select id="project-select"></select>
+      <button id="new-project-btn" class="btn-secondary">+ New Project</button>
+    </div>
+
+    <nav>
+      <button class="nav-link active" data-view="overview">Overview</button>
+      <button class="nav-link" data-view="queues">Queues</button>
+      <button class="nav-link" data-view="jobs">Job Explorer</button>
+      <button class="nav-link" data-view="workers">Workers</button>
+    </nav>
+
+    <button id="logout-btn" class="btn-logout">Log out</button>
+  </aside>
+
+  <main class="content">
+
+    <!-- ---- Overview ---- -->
+    <section id="view-overview" class="view">
+      <h2>Overview</h2>
+      <div class="stat-grid" id="stat-grid">
+        <!-- populated by JS -->
+      </div>
+      <h3>Jobs by Status</h3>
+      <div class="status-bars" id="status-bars"></div>
+    </section>
+
+    <!-- ---- Queues ---- -->
+    <section id="view-queues" class="view hidden">
+      <div class="view-header">
+        <h2>Queues</h2>
+        <button id="new-queue-btn" class="btn-primary">+ New Queue</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Priority</th><th>Concurrency</th>
+            <th>Retry Strategy</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="queues-table-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ---- Job Explorer ---- -->
+    <section id="view-jobs" class="view hidden">
+      <div class="view-header">
+        <h2>Job Explorer</h2>
+        <div class="filters">
+          <select id="job-queue-filter"></select>
+          <select id="job-status-filter">
+            <option value="">All statuses</option>
+            <option value="queued">Queued</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="claimed">Claimed</option>
+            <option value="running">Running</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+            <option value="dead_letter">Dead Letter</option>
+          </select>
+          <button id="new-job-btn" class="btn-primary">+ New Job</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type</th><th>Status</th><th>Priority</th>
+            <th>Attempts</th><th>Run At</th><th>Created</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jobs-table-body"></tbody>
+      </table>
+      <div class="pagination">
+        <button id="jobs-prev-page">&larr; Prev</button>
+        <span id="jobs-page-label">Page 1</span>
+        <button id="jobs-next-page">Next &rarr;</button>
+      </div>
+    </section>
+
+    <!-- ---- Workers ---- -->
+    <section id="view-workers" class="view hidden">
+      <h2>Workers</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>Hostname</th><th>Status</th><th>Last Heartbeat</th><th>Started</th></tr>
+        </thead>
+        <tbody id="workers-table-body"></tbody>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== Modals ===== -->
+<div id="modal-backdrop" class="modal-backdrop hidden">
+
+  <div id="modal-new-project" class="modal hidden">
+    <h3>New Project</h3>
+    <label>Project name</label>
+    <input type="text" id="np-name" />
+    <div class="modal-actions">
+      <button class="btn-secondary" data-close-modal>Cancel</button>
+      <button class="btn-primary" id="np-submit">Create</button>
+    </div>
+  </div>
+
+  <div id="modal-new-queue" class="modal hidden">
+    <h3>New Queue</h3>
+    <label>Queue name</label>
+    <input type="text" id="nq-name" />
+    <label>Priority</label>
+    <input type="number" id="nq-priority" value="0" />
+    <label>Concurrency limit</label>
+    <input type="number" id="nq-concurrency" value="5" />
+    <label>Retry strategy</label>
+    <select id="nq-retry-strategy">
+      <option value="exponential">Exponential</option>
+      <option value="linear">Linear</option>
+      <option value="fixed">Fixed</option>
+      <option value="none">None</option>
+    </select>
+    <label>Max retries</label>
+    <input type="number" id="nq-max-retries" value="3" />
+    <div class="modal-actions">
+      <button class="btn-secondary" data-close-modal>Cancel</button>
+      <button class="btn-primary" id="nq-submit">Create</button>
+    </div>
+  </div>
+
+  <div id="modal-new-job" class="modal hidden">
+    <h3>New Job</h3>
+    <label>Queue</label>
+    <select id="nj-queue"></select>
+    <label>Job type</label>
+    <input type="text" id="nj-type" placeholder="e.g. send_email" />
+    <label>Payload (JSON)</label>
+    <textarea id="nj-payload" rows="4">{}</textarea>
+    <label>Priority</label>
+    <input type="number" id="nj-priority" value="0" />
+    <label>Run at (optional, for delayed/scheduled)</label>
+    <input type="datetime-local" id="nj-runat" />
+    <label>Cron expression (optional, for recurring)</label>
+    <input type="text" id="nj-cron" placeholder="e.g. 0 9 * * *" />
+    <div class="modal-actions">
+      <button class="btn-secondary" data-close-modal>Cancel</button>
+      <button class="btn-primary" id="nj-submit">Create</button>
+    </div>
+  </div>
+
+  <div id="modal-job-detail" class="modal modal-wide hidden">
+    <h3>Job Detail</h3>
+    <div id="job-detail-body"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" data-close-modal>Close</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
